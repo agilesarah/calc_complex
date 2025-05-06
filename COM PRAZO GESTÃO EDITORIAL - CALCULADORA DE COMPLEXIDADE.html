@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Complexidade e Prazo de Projeto Editorial</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 30px auto;
+        }
+        h1 {
+            color: #0056b3;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="number"], input[type="date"], select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box; /* Important for padding and width */
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-top: 20px; /* Add some space above the button */
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .resultado-bloco {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        .minima { background-color: #e6fffa; border: 1px solid #b2f5ea; color: #135240;}
+        .baixa { background-color: #d6eaff; border: 1px solid #adcffa; color: #1d3c6e;}
+        .media { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404;}
+        .alta { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;}
+        .erro { background-color: #f0f0f0; border: 1px solid #ccc; color: #555;}
+
+        #resumoInputs, #prazoEstimado {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #666;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px dashed #eee;
+            border-radius: 4px;
+        }
+        #prazoEstimado strong {
+            color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Calculadora de Complexidade e Prazo</h1>
+
+        <label for="dataInicio">Data de Início do Projeto:</label>
+        <input type="date" id="dataInicio">
+
+        <label for="paginas">1. Quantidade de Páginas Editoradas:</label>
+        <input type="number" id="paginas" value="0" min="0">
+
+        <label for="graficos">2. Proporção de Gráficos, Figuras e Tabelas (% do conteúdo):</label>
+        <select id="graficos">
+            <option value="1" data-label="Até 30%">Até 30%</option>
+            <option value="2" data-label="Mais de 30% até 40%">Mais de 30% até 40%</option>
+            <option value="3" data-label="Mais de 40% até 50%">Mais de 40% até 50%</option>
+        </select>
+
+        <label for="projetoGrafico">3. Projeto Gráfico (PG):</label>
+        <select id="projetoGrafico">
+            <option value="0" data-label="Uso de projeto gráfico existente">Uso de projeto gráfico existente</option>
+            <option value="6" data-label="Criação de novo projeto gráfico">Criação de novo projeto gráfico</option>
+        </select>
+
+        <label for="assetsVisuais">4. Assets Visuais (Ícones, Imagens, Figuras, Ilustrações):</label>
+        <select id="assetsVisuais">
+            <option value="0" data-label="Aplicação (banco de imagens/ícones)">Aplicação (banco de imagens/ícones)</option>
+            <option value="4" data-label="Criação (novo design)">Criação (novo design de ícones, imagens, etc.)</option>
+        </select>
+
+        <button onclick="calcularTudo()">Calcular Complexidade e Prazo</button>
+
+        <div id="resultadoComplexidade" class="resultado-bloco erro">
+            Preencha os campos e clique em "Calcular".
+        </div>
+        <div id="prazoEstimado">
+            <!-- Data de finalização estimada será exibida aqui -->
+        </div>
+        <div id="resumoInputs">
+            <!-- Resumo dos inputs será exibido aqui -->
+        </div>
+    </div>
+
+    <script>
+        function addBusinessDays(startDate, days) {
+            if (!startDate || !(startDate instanceof Date) || isNaN(startDate)) {
+                return null; // Retorna null se a data de início for inválida
+            }
+            let currentDate = new Date(startDate.valueOf()); // Cria uma cópia da data
+            let addedDays = 0;
+            while (addedDays < days) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                let dayOfWeek = currentDate.getDay(); // 0 = Domingo, 6 = Sábado
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    addedDays++;
+                }
+            }
+            return currentDate;
+        }
+
+        function calcularTudo() {
+            // --- Parte 1: Calcular Complexidade ---
+            const paginasInput = parseInt(document.getElementById('paginas').value) || 0;
+            const graficosSelect = document.getElementById('graficos');
+            const projetoGraficoSelect = document.getElementById('projetoGrafico');
+            const assetsVisuaisSelect = document.getElementById('assetsVisuais');
+
+            const graficosPontos = parseInt(graficosSelect.value);
+            const projetoGraficoPontos = parseInt(projetoGraficoSelect.value);
+            const assetsVisuaisPontos = parseInt(assetsVisuaisSelect.value);
+
+            let paginasPontos = 0;
+            if (paginasInput > 0 && paginasInput <= 10) paginasPontos = 1;
+            else if (paginasInput >= 11 && paginasInput <= 60) paginasPontos = 3;
+            else if (paginasInput >= 61 && paginasInput <= 150) paginasPontos = 8;
+            else if (paginasInput > 150) paginasPontos = 15;
+
+            const totalPontos = paginasPontos + graficosPontos + projetoGraficoPontos + assetsVisuaisPontos;
+
+            let nivelComplexidade = "";
+            let classeResultado = "erro";
+            let prazoDiasUteis = 0;
+
+            if (totalPontos === 0 && paginasInput === 0) {
+                 nivelComplexidade = "Nenhuma entrada válida.";
+            } else if (totalPontos >= 1 && totalPontos <= 2) {
+                nivelComplexidade = "Mínima Complexidade";
+                classeResultado = "minima";
+                prazoDiasUteis = 10;
+            } else if (totalPontos >= 3 && totalPontos <= 5) {
+                nivelComplexidade = "Baixa Complexidade";
+                classeResultado = "baixa";
+                prazoDiasUteis = 20;
+            } else if (totalPontos >= 6 && totalPontos <= 17) {
+                nivelComplexidade = "Média Complexidade";
+                classeResultado = "media";
+                prazoDiasUteis = 36;
+            } else if (totalPontos >= 18) {
+                nivelComplexidade = "Alta Complexidade";
+                classeResultado = "alta";
+                prazoDiasUteis = 41;
+            } else {
+                nivelComplexidade = "Verifique os valores (pontuação fora do esperado).";
+            }
+
+            const resultadoComplexidadeDiv = document.getElementById('resultadoComplexidade');
+            resultadoComplexidadeDiv.innerHTML = `<strong>Pontuação Total: ${totalPontos}</strong><br>${nivelComplexidade}`;
+            resultadoComplexidadeDiv.className = `resultado-bloco ${classeResultado}`;
+
+            // --- Parte 2: Calcular Prazo Estimado ---
+            const dataInicioString = document.getElementById('dataInicio').value;
+            const prazoEstimadoDiv = document.getElementById('prazoEstimado');
+            let dataFinalizacaoEstimadaTexto = "Por favor, insira uma data de início válida.";
+
+            if (dataInicioString && prazoDiasUteis > 0) {
+                // Adicionar 'T00:00:00' para garantir que a data seja interpretada no fuso horário local
+                // e não UTC, o que pode causar problemas de "um dia a menos".
+                const dataInicio = new Date(dataInicioString + 'T00:00:00');
+
+                if (!isNaN(dataInicio.valueOf())) { // Verifica se a data é válida
+                    const dataFinalizacao = addBusinessDays(dataInicio, prazoDiasUteis);
+                    if (dataFinalizacao) {
+                        dataFinalizacaoEstimadaTexto = `Considerando ${prazoDiasUteis} dias úteis, a <strong>Data Estimada de Finalização</strong> é: <strong>${dataFinalizacao.toLocaleDateString('pt-BR')}</strong>.`;
+                    } else {
+                        dataFinalizacaoEstimadaTexto = "Não foi possível calcular a data de finalização.";
+                    }
+                }
+            } else if (!dataInicioString) {
+                 dataFinalizacaoEstimadaTexto = "Insira uma data de início para calcular o prazo.";
+            } else if (prazoDiasUteis === 0 && nivelComplexidade !== "Nenhuma entrada válida." && nivelComplexidade !== "Verifique os valores (pontuação fora do esperado).") {
+                dataFinalizacaoEstimadaTexto = "Complexidade não resultou em um prazo definido.";
+            }
+
+
+            prazoEstimadoDiv.innerHTML = dataFinalizacaoEstimadaTexto;
+
+            // --- Parte 3: Resumo dos Inputs ---
+            const resumoInputsDiv = document.getElementById('resumoInputs');
+            if (nivelComplexidade !== "Nenhuma entrada válida.") {
+                resumoInputsDiv.innerHTML = `
+                    <strong>Detalhes da Avaliação:</strong><br>
+                    - Data de Início: ${dataInicioString ? new Date(dataInicioString + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informada'}<br>
+                    - Páginas: ${paginasInput} (Pontos: ${paginasPontos})<br>
+                    - Gráficos/Figuras/Tabelas: ${graficosSelect.options[graficosSelect.selectedIndex].dataset.label} (Pontos: ${graficosPontos})<br>
+                    - Projeto Gráfico: ${projetoGraficoSelect.options[projetoGraficoSelect.selectedIndex].dataset.label} (Pontos: ${projetoGraficoPontos})<br>
+                    - Assets Visuais: ${assetsVisuaisSelect.options[assetsVisuaisSelect.selectedIndex].dataset.label} (Pontos: ${assetsVisuaisPontos})
+                `;
+            } else {
+                resumoInputsDiv.innerHTML = "";
+            }
+        }
+
+        // Opcional: Calcular automaticamente ao mudar qualquer valor
+        // (descomente as linhas abaixo se quiser essa funcionalidade)
+        // document.getElementById('dataInicio').addEventListener('change', calcularTudo);
+        // document.getElementById('paginas').addEventListener('input', calcularTudo);
+        // document.getElementById('graficos').addEventListener('change', calcularTudo);
+        // document.getElementById('projetoGrafico').addEventListener('change', calcularTudo);
+        // document.getElementById('assetsVisuais').addEventListener('change', calcularTudo);
+        // window.onload = calcularTudo; // Calcular ao carregar a página com valores padrão
+    </script>
+</body>
+</html>
